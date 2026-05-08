@@ -54,25 +54,25 @@ local function BuildExpectedSaveSnapshot(SaveData)
     return Snapshot
 end
 
-local function BuildSaveSignature(SaveData)
-    local Parts = {}
-
-    if not SaveData or not SaveData.Items then
-        return ""
+local function HasAnyV2Items(Player)
+    local DefineIDs = UGCBackpackSystemV2.GetAllItemDefineIDsV2(Player)
+    if DefineIDs and #DefineIDs > 0 then
+        return true
     end
 
-    for Index, ItemData in ipairs(SaveData.Items) do
-        Parts[Index] = table.concat({
-            tostring(ItemData.ItemID or ""),
-            tostring(ItemData.Count or ""),
-            tostring(ItemData.Place or ""),
-            tostring(ItemData.Slot or ""),
-            tostring(ItemData.TargetItemID or ""),
-            tostring(ItemData.AttachSlot or ""),
-        }, ":")
+    local WarehouseDefineIDs = UGCBackpackSystemV2.GetAllWarehouseItemDefineIDs(Player)
+    if WarehouseDefineIDs and #WarehouseDefineIDs > 0 then
+        return true
     end
 
-    return table.concat(Parts, "|")
+    for _, SlotName in pairs(InventorySaveData.EquipSlot) do
+        local DefineID = UGCBackpackSystemV2.GetEquippedItemBySlotName(Player, SlotName)
+        if IsValidDefineID(DefineID) then
+            return true
+        end
+    end
+
+    return false
 end
 
 function InventoryService.GetPlayerController(PlayerKey)
@@ -110,22 +110,28 @@ function InventoryService.TryLoadPlayerInventory(PlayerKey, PlayerController)
         return false
     end
 
+    if InventoryService.LoadedPlayers[PlayerKey] then
+        return true
+    end
+
+    if HasAnyV2Items(PlayerController) then
+        InventoryService.LoadedPlayers[PlayerKey] = true
+        InventoryService.LoadResults[PlayerKey] = true
+        Log("initial mock load skipped, existing V2 items detected, PlayerKey=" .. tostring(PlayerKey))
+        return true
+    end
+
     local SaveData = InventorySaveData.LoadPlayerSave(PlayerKey)
     if not SaveData or not SaveData.Items then
         Log("load failed, empty save data, PlayerKey=" .. tostring(PlayerKey))
         return false
     end
 
-    local SaveSignature = BuildSaveSignature(SaveData)
-    if InventoryService.LoadedPlayers[PlayerKey] == SaveSignature then
-        return true
-    end
-
     if InventoryService.IsSaveAlreadyApplied(PlayerController, SaveData) then
         InventoryService.ApplyEquipmentSnapshot(PlayerController, SaveData)
         UGCBackpackSystemV2.TrySortOutItemV2(PlayerController)
         UGCBackpackSystemV2.TrySortOutWarehouseItem(PlayerController)
-        InventoryService.LoadedPlayers[PlayerKey] = SaveSignature
+        InventoryService.LoadedPlayers[PlayerKey] = true
         InventoryService.LoadResults[PlayerKey] = true
         Log("load skipped, save already applied, PlayerKey=" .. tostring(PlayerKey))
         return true
@@ -141,13 +147,13 @@ function InventoryService.TryLoadPlayerInventory(PlayerKey, PlayerController)
         Result = InventoryService.ApplySaveData(PlayerController, SaveData)
     end
 
-    InventoryService.LoadedPlayers[PlayerKey] = SaveSignature
+    InventoryService.LoadedPlayers[PlayerKey] = true
     InventoryService.LoadResults[PlayerKey] = Result
 
     if Result then
-        Log("load completed, PlayerKey=" .. tostring(PlayerKey))
+        Log("initial mock load completed, PlayerKey=" .. tostring(PlayerKey))
     else
-        Log("load finished with errors, PlayerKey=" .. tostring(PlayerKey))
+        Log("initial mock load finished with errors, PlayerKey=" .. tostring(PlayerKey))
     end
 
     return Result

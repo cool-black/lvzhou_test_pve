@@ -1,6 +1,7 @@
 ---@class UGCPlayerController_C:BP_UGCPlayerController_C
 --Edit Below--
 local LobbyStateService = UGCGameSystem.UGCRequire('Script.Gameplay.State.LobbyStateService')
+local RunStateService = UGCGameSystem.UGCRequire('Script.Gameplay.State.RunStateService')
 
 local UGCPlayerController = {}
 
@@ -12,7 +13,7 @@ local function Log(Message)
 end
 
 function UGCPlayerController:GetAvailableServerRPCs()
-    return "RPC_Server_SetLobbyState"
+    return "RPC_Server_SetLobbyState", "RPC_Server_RequestLevelSettle"
 end
 
 function UGCPlayerController:GetPlayerState()
@@ -64,6 +65,11 @@ end
 function UGCPlayerController:RequestReturnLobby()
     Log(string.format("Client RequestReturnLobby PlayerKey=%s", tostring(self:GetPlayerKey())))
 
+    if UGCMultiMode.GetModeID() == COMMON_LEVEL_MODE_ID then
+        UnrealNetwork.CallUnrealRPC(self, self, "RPC_Server_RequestLevelSettle", true, "ReturnLobby")
+        return
+    end
+
     local bRequested = UGCMultiMode.RequestMatch(LOBBY_MODE_ID, nil, self)
     Log(string.format("Client RequestReturnLobby Result=%s", tostring(bRequested)))
     if not bRequested then
@@ -80,6 +86,69 @@ function UGCPlayerController:RPC_Server_SetLobbyState(NewState, Reason)
     local PlayerState = self:GetPlayerState()
     Log(string.format("Server RPC_SetLobbyState PlayerKey=%s NewState=%s Reason=%s", tostring(self:GetPlayerKey()), tostring(NewState), tostring(Reason)))
     LobbyStateService.SetState(PlayerState, NewState, Reason)
+end
+
+function UGCPlayerController:RPC_Server_RequestLevelSettle(IsFinish, Reason)
+    local bIsFinish = IsFinish == nil and true or IsFinish
+    Log(string.format("Server RPC_RequestLevelSettle PlayerKey=%s IsFinish=%s Reason=%s", tostring(self:GetPlayerKey()), tostring(bIsFinish), tostring(Reason)))
+    self:ServerRequestLevelSettle(bIsFinish, Reason)
+end
+
+function UGCPlayerController:ServerRequestLevelSettle(IsFinish, Reason)
+    if not UGCGameSystem.IsServer() then
+        Log("ServerRequestLevelSettle ignored on client")
+        return false
+    end
+
+    local PlayerState = self:GetPlayerState()
+    if PlayerState and PlayerState.Settled then
+        Log(string.format("ServerRequestLevelSettle ignored, already settled PlayerKey=%s Reason=%s", tostring(self:GetPlayerKey()), tostring(Reason)))
+        return false
+    end
+
+    local bIsFinish = IsFinish == nil and true or IsFinish
+    if PlayerState then
+        if bIsFinish then
+            RunStateService.SetState(PlayerState, RunStateService.StateType.Extracted, Reason or "ServerRequestLevelSettle")
+        else
+            RunStateService.SetState(PlayerState, RunStateService.StateType.Dead, Reason or "ServerRequestLevelSettle")
+        end
+    end
+
+    local TeamID = self.TeamID
+    if not TeamID or TeamID <= 0 then
+        TeamID = UGCTeamSystem.GetTeamIDByPlayerKey(self:GetPlayerKey())
+    end
+
+    if TeamID and TeamID > 0 then
+        UGCLevelFlowSystem.LevelSettle(TeamID, bIsFinish)
+        Log(string.format("ServerRequestLevelSettle LevelSettle TeamID=%s IsFinish=%s", tostring(TeamID), tostring(bIsFinish)))
+        return true
+    end
+
+    UGCLevelFlowSystem.GameSettle(bIsFinish)
+    Log(string.format("ServerRequestLevelSettle fallback GameSettle IsFinish=%s", tostring(bIsFinish)))
+    return true
+end
+
+function UGCPlayerController:OnGameSettle()
+    local PlayerState = self:GetPlayerState()
+    if not PlayerState or not PlayerState.Settled then
+        Log("Client OnGameSettle ignored, PlayerState is nil or not settled")
+        return
+    end
+
+    Log(string.format("Client OnGameSettle PlayerKey=%s SettlementSucceeded=%s", tostring(self:GetPlayerKey()), tostring(PlayerState.SettlementSucceeded)))
+
+    if UGCMultiMode.GetModeID() ~= COMMON_LEVEL_MODE_ID then
+        return
+    end
+
+    local bRequested = UGCMultiMode.RequestMatch(LOBBY_MODE_ID, nil, self)
+    Log(string.format("Client OnGameSettle RequestMatch Lobby Result=%s", tostring(bRequested)))
+    if not bRequested then
+        UGCWidgetManagerSystem.ShowTipsUI("返回大厅失败")
+    end
 end
 
 return UGCPlayerController

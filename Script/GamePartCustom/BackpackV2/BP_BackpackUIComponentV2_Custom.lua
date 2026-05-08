@@ -9,7 +9,12 @@ local function Log(Message)
 end
 
 local function GetModeID()
-    return UGCMultiMode.GetModeID()
+    local ModeID = UGCMultiMode.GetModeID()
+    if ModeID == 0 then
+        return GameData.DefaultModeID
+    end
+
+    return ModeID
 end
 
 local function IsLobbyMode()

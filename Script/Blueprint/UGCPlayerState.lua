@@ -6,6 +6,7 @@ local UGCPlayerState = {
     LobbyState = "Idle",
     RunState = "InRun",
     Settled = false,
+    SettlementSucceeded = false,
     ExtractStartTime = 0,
     ExtractDuration = 8,
     KillCount = 0,
@@ -27,7 +28,7 @@ local function GetPlayerKey(PlayerState)
 end
 
 function UGCPlayerState:GetReplicatedProperties()
-    return {"LobbyState", "Lazy"}, {"RunState", "Lazy"}, {"Settled", "Lazy"},
+    return {"LobbyState", "Lazy"}, {"RunState", "Lazy"}, {"Settled", "Lazy"}, {"SettlementSucceeded", "Lazy"},
         {"ExtractStartTime", "Lazy"}, {"ExtractDuration", "Lazy"},
         {"KillCount", "Lazy"}, {"EliteKillCount", "Lazy"}, {"PickCount", "Lazy"}
 end
@@ -73,7 +74,23 @@ function UGCPlayerState:OnRep_RunState()
 end
 
 function UGCPlayerState:OnRep_Settled()
-    Log(string.format("Client OnRep_Settled PlayerKey=%s Settled=%s", GetPlayerKey(self), tostring(self.Settled)))
+    Log(string.format("Client OnRep_Settled PlayerKey=%s Settled=%s SettlementSucceeded=%s",
+        GetPlayerKey(self),
+        tostring(self.Settled),
+        tostring(self.SettlementSucceeded)))
+
+    if self.Settled then
+        local PlayerController = UGCGameSystem.GetPlayerControllerByPlayerState(self)
+        if PlayerController and PlayerController.OnGameSettle then
+            PlayerController:OnGameSettle()
+        end
+    end
+end
+
+function UGCPlayerState:OnRep_SettlementSucceeded()
+    Log(string.format("Client OnRep_SettlementSucceeded PlayerKey=%s SettlementSucceeded=%s",
+        GetPlayerKey(self),
+        tostring(self.SettlementSucceeded)))
 end
 
 function UGCPlayerState:ReceiveEndPlay()

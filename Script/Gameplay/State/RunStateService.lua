@@ -73,6 +73,7 @@ function RunStateService.InitPlayer(PlayerState, Reason)
 
     PlayerState.bRunStateInitialized = true
     PlayerState.Settled = false
+    PlayerState.SettlementSucceeded = false
     PlayerState.ExtractStartTime = 0
     PlayerState.ExtractDuration = DEFAULT_EXTRACT_DURATION
     PlayerState.KillCount = 0
@@ -81,6 +82,7 @@ function RunStateService.InitPlayer(PlayerState, Reason)
     PlayerState.RunState = RunStateService.StateType.InRun
 
     UnrealNetwork.RepLazyProperty(PlayerState, "Settled")
+    UnrealNetwork.RepLazyProperty(PlayerState, "SettlementSucceeded")
     UnrealNetwork.RepLazyProperty(PlayerState, "ExtractStartTime")
     UnrealNetwork.RepLazyProperty(PlayerState, "ExtractDuration")
     UnrealNetwork.RepLazyProperty(PlayerState, "KillCount")
