@@ -2,6 +2,11 @@
 --Edit Below--
 local UGCGameMode = {};
 local UGCGameData = UGCGameSystem.UGCRequire('Script.Blueprint.UGCGameData')
+local InventoryService = UGCGameSystem.UGCRequire('Script.Gameplay.Inventory.InventoryService')
+local RunStateService = UGCGameSystem.UGCRequire('Script.Gameplay.State.RunStateService')
+
+local LOBBY_MODE_ID = 1001
+local COMMON_LEVEL_MODE_ID = 1002
 
 function UGCGameMode:ReceiveBeginPlay()
     if not UGCGameSystem.IsServer() then
@@ -13,7 +18,23 @@ function UGCGameMode:ReceiveBeginPlay()
         ModeID = UGCGameData.DefaultModeID
     end
 
+    self.CurrentModeID = ModeID
     self:InitLevelFlow(ModeID)
+end
+
+function UGCGameMode:ReceiveTick(DeltaTime)
+    if not UGCGameSystem.IsServer() then
+        return
+    end
+
+    if self.CurrentModeID == LOBBY_MODE_ID then
+        InventoryService.TryLoadAllLobbyPlayers()
+        return
+    end
+
+    if self.CurrentModeID == COMMON_LEVEL_MODE_ID then
+        RunStateService.TryInitAllRunPlayers()
+    end
 end
 
 function UGCGameMode:InitLevelFlow(ModeID)
