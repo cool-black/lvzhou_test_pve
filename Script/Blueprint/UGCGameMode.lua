@@ -3,6 +3,7 @@
 local UGCGameMode = {};
 local UGCGameData = UGCGameSystem.UGCRequire('Script.Blueprint.UGCGameData')
 local InventoryService = UGCGameSystem.UGCRequire('Script.Gameplay.Inventory.InventoryService')
+local LobbyStateService = UGCGameSystem.UGCRequire('Script.Gameplay.State.LobbyStateService')
 local RunStateService = UGCGameSystem.UGCRequire('Script.Gameplay.State.RunStateService')
 
 local LOBBY_MODE_ID = 1001
@@ -28,6 +29,7 @@ function UGCGameMode:ReceiveTick(DeltaTime)
     end
 
     if self.CurrentModeID == LOBBY_MODE_ID then
+        LobbyStateService.TryInitAllLobbyPlayers()
         InventoryService.TryLoadAllLobbyPlayers()
         return
     end

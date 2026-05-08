@@ -1,12 +1,19 @@
 local BP_BackpackUIComponentV2_Custom = {}
+local GameData = UGCGameSystem.UGCRequire("Script.Blueprint.UGCGameData")
 
-local LOBBY_MODE_ID = 1001
 local LOBBY_BACKPACK_MODE = 3
 local RUN_BACKPACK_MODE = 1
 
+local function Log(Message)
+    ugcprint("[BackpackV2Custom] " .. tostring(Message))
+end
+
+local function GetModeID()
+    return UGCMultiMode.GetModeID()
+end
+
 local function IsLobbyMode()
-    local ModeID = UGCMultiMode.GetModeID()
-    return ModeID == 0 or ModeID == LOBBY_MODE_ID
+    return GameData.GetGameModeName(GetModeID()) == GameData.ModeName.Lobby
 end
 
 ---开始运行时执行
@@ -22,13 +29,8 @@ end
 ---默认背包模式OverrideDefaultMode可配置
 ---生效范围：客户端
 ---@return number @背包模式 [1-3]
-function BP_BackpackUIComponentV2_Custom:GetDefaultMode()
-    if IsLobbyMode() then
-        return LOBBY_BACKPACK_MODE
-    end
-
-    return RUN_BACKPACK_MODE
-end
+-- function BP_BackpackUIComponentV2_Custom:GetDefaultMode()
+-- end
 
 ---获取背包入口按钮控件
 ---生效范围：客户端
@@ -52,6 +54,8 @@ end
 ---@param Style number @0全屏，1半屏
 ---@param Mode number @1:背包+装备栏 2:背包+仓库 3:背包+装备栏+仓库
 function BP_BackpackUIComponentV2_Custom:OpenBattleMainUIStyle(Style, Mode)
+    Log(string.format("OpenBattleMainUIStyle ModeID=%s Style=%s Mode=%s IsLobby=%s", tostring(GetModeID()), tostring(Style), tostring(Mode), tostring(IsLobbyMode())))
+
     if IsLobbyMode() then
         self:OpenLobbyBackpackMainUI(LOBBY_BACKPACK_MODE)
         return
@@ -60,13 +64,15 @@ function BP_BackpackUIComponentV2_Custom:OpenBattleMainUIStyle(Style, Mode)
     self:OpenBattleMainPanel(Style, RUN_BACKPACK_MODE)
 end
 
-function BP_BackpackUIComponentV2_Custom:OpenBattleMainPanel(Style, Mode)
+function BP_BackpackUIComponentV2_Custom:ClosePanel()
+    Log(string.format("ClosePanel ModeID=%s IsLobby=%s", tostring(GetModeID()), tostring(IsLobbyMode())))
+
     if IsLobbyMode() then
-        self:OpenLobbyBackpackMainUI(LOBBY_BACKPACK_MODE)
+        self:CloseLobbyPanel()
         return
     end
 
-    BP_BackpackUIComponentV2_Custom.SuperClass.OpenBattleMainPanel(self, Style, RUN_BACKPACK_MODE)
+    self:CloseBattleMainPanel()
 end
 
 ---打开删除弹窗

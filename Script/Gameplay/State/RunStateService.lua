@@ -1,6 +1,4 @@
-local RunStateService = {
-    PlayerStates = {},
-}
+local RunStateService = {}
 
 RunStateService.StateType = {
     InRun = "InRun",
@@ -10,49 +8,100 @@ RunStateService.StateType = {
     Dead = "Dead",
 }
 
-function RunStateService.InitPlayer(PlayerKey)
-    if not PlayerKey then
-        return nil
-    end
+local DEFAULT_EXTRACT_DURATION = 8
 
-    if not RunStateService.PlayerStates[PlayerKey] then
-        RunStateService.PlayerStates[PlayerKey] = {
-            State = RunStateService.StateType.InRun,
-            Settled = false,
-            ExtractStartTime = 0,
-            ExtractDuration = 8,
-            KillCount = 0,
-            EliteKillCount = 0,
-            PickCount = 0,
-        }
-    end
-
-    return RunStateService.PlayerStates[PlayerKey]
+local function Log(Message)
+    ugcprint("[RunState] " .. tostring(Message))
 end
 
-function RunStateService.TryInitAllRunPlayers()
-    local PlayerKeys = UGCGameSystem.GetAllPlayerKey(true)
-    if not PlayerKeys then
-        return
+local function IsValidState(State)
+    for _, StateValue in pairs(RunStateService.StateType) do
+        if State == StateValue then
+            return true
+        end
     end
 
-    for _, PlayerKey in pairs(PlayerKeys) do
-        RunStateService.InitPlayer(PlayerKey)
+    return false
+end
+
+function RunStateService.GetState(PlayerState)
+    if not PlayerState or not PlayerState.RunState then
+        return RunStateService.StateType.InRun
     end
+
+    return PlayerState.RunState
 end
 
-function RunStateService.GetPlayerState(PlayerKey)
-    return RunStateService.PlayerStates[PlayerKey]
-end
-
-function RunStateService.SetState(PlayerKey, NewState)
-    local PlayerState = RunStateService.InitPlayer(PlayerKey)
+function RunStateService.SetState(PlayerState, NewState, Reason)
     if not PlayerState then
+        Log("SetState failed, PlayerState is nil, NewState=" .. tostring(NewState))
         return false
     end
 
-    PlayerState.State = NewState
+    if not UGCGameSystem.IsServer() then
+        Log("SetState ignored on client, NewState=" .. tostring(NewState))
+        return false
+    end
+
+    if not IsValidState(NewState) then
+        Log("SetState failed, invalid NewState=" .. tostring(NewState))
+        return false
+    end
+
+    local OldState = RunStateService.GetState(PlayerState)
+    if OldState == NewState then
+        return true
+    end
+
+    PlayerState.RunState = NewState
+    UnrealNetwork.RepLazyProperty(PlayerState, "RunState")
+
+    local PlayerKey = UGCGameSystem.GetPlayerKeyByPlayerState(PlayerState)
+    Log(string.format("Server PlayerKey=%s %s -> %s Reason=%s", tostring(PlayerKey), tostring(OldState), tostring(NewState), tostring(Reason)))
     return true
+end
+
+function RunStateService.InitPlayer(PlayerState, Reason)
+    if not PlayerState then
+        Log("InitPlayer failed, PlayerState is nil")
+        return false
+    end
+
+    if PlayerState.bRunStateInitialized then
+        return true
+    end
+
+    PlayerState.bRunStateInitialized = true
+    PlayerState.Settled = false
+    PlayerState.ExtractStartTime = 0
+    PlayerState.ExtractDuration = DEFAULT_EXTRACT_DURATION
+    PlayerState.KillCount = 0
+    PlayerState.EliteKillCount = 0
+    PlayerState.PickCount = 0
+    PlayerState.RunState = RunStateService.StateType.InRun
+
+    UnrealNetwork.RepLazyProperty(PlayerState, "Settled")
+    UnrealNetwork.RepLazyProperty(PlayerState, "ExtractStartTime")
+    UnrealNetwork.RepLazyProperty(PlayerState, "ExtractDuration")
+    UnrealNetwork.RepLazyProperty(PlayerState, "KillCount")
+    UnrealNetwork.RepLazyProperty(PlayerState, "EliteKillCount")
+    UnrealNetwork.RepLazyProperty(PlayerState, "PickCount")
+    UnrealNetwork.RepLazyProperty(PlayerState, "RunState")
+
+    local PlayerKey = UGCGameSystem.GetPlayerKeyByPlayerState(PlayerState)
+    Log(string.format("Server init PlayerKey=%s RunState=%s Reason=%s", tostring(PlayerKey), tostring(PlayerState.RunState), tostring(Reason)))
+    return true
+end
+
+function RunStateService.TryInitAllRunPlayers()
+    local PlayerStates = UGCGameSystem.GetAllPlayerState(true)
+    if not PlayerStates then
+        return
+    end
+
+    for _, PlayerState in pairs(PlayerStates) do
+        RunStateService.InitPlayer(PlayerState, "TryInitAllRunPlayers")
+    end
 end
 
 return RunStateService
