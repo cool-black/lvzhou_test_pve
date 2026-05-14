@@ -1,16 +1,16 @@
 [Root]
-ProjectDisplayName=test_gunfire
-ProjectDescription=test_gunfire
+ProjectDisplayName=lvzhou_test_pve
+ProjectDescription=lvzhou_test_pve
 DataTableRootDir=
-ProjectName=test_gunfire
-ProjectTrueName=0C42139242DEDA44FDD88651F47B8DDEFF980F235EC7FEBDD074C4ECEC934F54
-ProjectShortPath=/test_gunfire/
-StartMapName=/test_gunfire/UGCmap
+ProjectName=lvzhou_test_pve
+ProjectTrueName=616CD024B8C9E16F1AF2317D3BD2208561C19B4E4ED1288C9BF6DE9E40B2080A93776DA122C87FCD9DEB1077EBCBFDE1
+ProjectShortPath=/lvzhou_test_pve/
+StartMapName=/lvzhou_test_pve/UGCmap
 MapMode=0
 bIsBigWorld=0
-Version=1.36.11.29250
+Version=1.36.11.29252
 UpdateVersion=10
-GameModePath=/test_gunfire/Asset/Blueprint/UGCGameMode.UGCGameMode_C
+GameModePath=/lvzhou_test_pve/Asset/Blueprint/UGCGameMode.UGCGameMode_C
 
 [FeatureFlags]
 bOpenItemEditorV1=0
