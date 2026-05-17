@@ -6,9 +6,6 @@ local InventoryService = UGCGameSystem.UGCRequire('Script.Gameplay.Inventory.Inv
 local LobbyStateService = UGCGameSystem.UGCRequire('Script.Gameplay.State.LobbyStateService')
 local RunStateService = UGCGameSystem.UGCRequire('Script.Gameplay.State.RunStateService')
 
-local LOBBY_MODE_ID = 1001
-local COMMON_LEVEL_MODE_ID = 1002
-
 function UGCGameMode:ReceiveBeginPlay()
     if not UGCGameSystem.IsServer() then
         return
@@ -28,13 +25,13 @@ function UGCGameMode:ReceiveTick(DeltaTime)
         return
     end
 
-    if self.CurrentModeID == LOBBY_MODE_ID then
+    if self.CurrentModeID == UGCGameData.ModeID.Lobby then
         LobbyStateService.TryInitAllLobbyPlayers()
         InventoryService.TryLoadAllLobbyPlayers()
         return
     end
 
-    if self.CurrentModeID == COMMON_LEVEL_MODE_ID then
+    if self.CurrentModeID == UGCGameData.ModeID.CommonLevel then
         RunStateService.TryInitAllRunPlayers()
     end
 end

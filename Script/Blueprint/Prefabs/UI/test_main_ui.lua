@@ -5,7 +5,7 @@
 --Edit Below--
 local test_main_ui = { bInitDoOnce = false } 
 local LobbyStateService = UGCGameSystem.UGCRequire('Script.Gameplay.State.LobbyStateService')
-local LOBBY_MODE_ID = 1001
+local UGCGameData = UGCGameSystem.UGCRequire('Script.Blueprint.UGCGameData')
 local START_MATCH_TEXT = "开始匹配"
 local CANCEL_MATCH_TEXT = "取消匹配"
 
@@ -64,9 +64,9 @@ end
 function test_main_ui:RefreshButtonVisible()
     local ModeID = UGCMultiMode.GetModeID()
     if ModeID == 0 then
-        ModeID = LOBBY_MODE_ID
+        ModeID = UGCGameData.ModeID.Lobby
     end
-    local bIsLobby = ModeID == LOBBY_MODE_ID
+    local bIsLobby = ModeID == UGCGameData.ModeID.Lobby
     self.btn_start_match:SetVisibility(bIsLobby and ESlateVisibility.Visible or ESlateVisibility.Collapsed)
     self.btn_return_lobby:SetVisibility(bIsLobby and ESlateVisibility.Collapsed or ESlateVisibility.Visible)
     self:RefreshStartMatchText()

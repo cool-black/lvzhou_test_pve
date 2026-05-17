@@ -1,6 +1,6 @@
 local UGCPlayerPawn = {}
 
-local COMMON_LEVEL_MODE_ID = 1002
+local UGCGameData = UGCGameSystem.UGCRequire('Script.Blueprint.UGCGameData')
 
 local function Log(Message)
     ugcprint("[UGCPlayerPawn] " .. tostring(Message))
@@ -28,7 +28,7 @@ function UGCPlayerPawn:OnDynamicStateEnter(CurState)
         return
     end
 
-    if UGCMultiMode.GetModeID() ~= COMMON_LEVEL_MODE_ID then
+    if UGCMultiMode.GetModeID() ~= UGCGameData.ModeID.CommonLevel then
         return
     end
 

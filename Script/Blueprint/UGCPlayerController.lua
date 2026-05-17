@@ -2,11 +2,9 @@
 --Edit Below--
 local LobbyStateService = UGCGameSystem.UGCRequire('Script.Gameplay.State.LobbyStateService')
 local RunStateService = UGCGameSystem.UGCRequire('Script.Gameplay.State.RunStateService')
+local UGCGameData = UGCGameSystem.UGCRequire('Script.Blueprint.UGCGameData')
 
 local UGCPlayerController = {}
-
-local LOBBY_MODE_ID = 1001
-local COMMON_LEVEL_MODE_ID = 1002
 
 local function Log(Message)
     ugcprint("[UGCPlayerController] " .. tostring(Message))
@@ -41,8 +39,8 @@ function UGCPlayerController:RequestToggleLobbyReady()
         return
     end
 
-    local bRequested = UGCMultiMode.RequestMatch(COMMON_LEVEL_MODE_ID, self.OnRequestMatchResponse, self, true)
-    Log(string.format("Client RequestMatch ModeID=%s Result=%s", tostring(COMMON_LEVEL_MODE_ID), tostring(bRequested)))
+    local bRequested = UGCMultiMode.RequestMatch(UGCGameData.ModeID.CommonLevel, self.OnRequestMatchResponse, self, true)
+    Log(string.format("Client RequestMatch ModeID=%s Result=%s", tostring(UGCGameData.ModeID.CommonLevel), tostring(bRequested)))
     if bRequested then
         self:RequestSetLobbyState(LobbyStateService.StateType.Ready, "StartMatch")
         UGCWidgetManagerSystem.ShowTipsUI("开始匹配")
@@ -65,12 +63,12 @@ end
 function UGCPlayerController:RequestReturnLobby()
     Log(string.format("Client RequestReturnLobby PlayerKey=%s", tostring(self:GetPlayerKey())))
 
-    if UGCMultiMode.GetModeID() == COMMON_LEVEL_MODE_ID then
+    if UGCMultiMode.GetModeID() == UGCGameData.ModeID.CommonLevel then
         UnrealNetwork.CallUnrealRPC(self, self, "RPC_Server_RequestLevelSettle", true, "ReturnLobby")
         return
     end
 
-    local bRequested = UGCMultiMode.RequestMatch(LOBBY_MODE_ID, nil, self)
+    local bRequested = UGCMultiMode.RequestMatch(UGCGameData.ModeID.Lobby, nil, self)
     Log(string.format("Client RequestReturnLobby Result=%s", tostring(bRequested)))
     if not bRequested then
         UGCWidgetManagerSystem.ShowTipsUI("返回大厅失败")
@@ -140,11 +138,11 @@ function UGCPlayerController:OnGameSettle()
 
     Log(string.format("Client OnGameSettle PlayerKey=%s SettlementSucceeded=%s", tostring(self:GetPlayerKey()), tostring(PlayerState.SettlementSucceeded)))
 
-    if UGCMultiMode.GetModeID() ~= COMMON_LEVEL_MODE_ID then
+    if UGCMultiMode.GetModeID() ~= UGCGameData.ModeID.CommonLevel then
         return
     end
 
-    local bRequested = UGCMultiMode.RequestMatch(LOBBY_MODE_ID, nil, self)
+    local bRequested = UGCMultiMode.RequestMatch(UGCGameData.ModeID.Lobby, nil, self)
     Log(string.format("Client OnGameSettle RequestMatch Lobby Result=%s", tostring(bRequested)))
     if not bRequested then
         UGCWidgetManagerSystem.ShowTipsUI("返回大厅失败")

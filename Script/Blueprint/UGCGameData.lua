@@ -1,6 +1,11 @@
 local UGCGameData = {}
 
-UGCGameData.DefaultModeID = 1001
+UGCGameData.ModeID = {
+    Lobby = 1001,
+    CommonLevel = 1002,
+}
+
+UGCGameData.DefaultModeID = UGCGameData.ModeID.Lobby
 
 UGCGameData.ModeName = {
     Lobby = "大厅广场",
@@ -39,13 +44,15 @@ function UGCGameData.GetGameModeName(ModeID)
         return GameModeConfig.ModeName or GameModeConfig.Name
     end
 
-    if ModeID == 1001 then
+    if ModeID == UGCGameData.ModeID.Lobby then
         return UGCGameData.ModeName.Lobby
     end
 
-    if ModeID == 1002 then
+    if ModeID == UGCGameData.ModeID.CommonLevel then
         return UGCGameData.ModeName.CommonLevel
     end
+
+    print(string.format("[warning][GetGameModeName]>>>>>>>>>>>>can not get game mode name of id: %s", ModeID))
 
     return nil
 end
