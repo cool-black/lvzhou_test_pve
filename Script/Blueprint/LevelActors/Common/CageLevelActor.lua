@@ -1,4 +1,4 @@
----@class CCageLevelActor_C:UGCLevelActor
+---@class CageLevelActor_C:UGCLevelActor
 ---@field DefaultSceneRoot USceneComponent
 --Edit Below--
 local CommonLevelActor = {}

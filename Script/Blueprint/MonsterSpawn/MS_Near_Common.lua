@@ -1,4 +1,4 @@
----@class MonSpawn_Common_C:BP_UGCMobSpawner_C
+---@class MS_Near_Common_C:BP_UGCMobSpawner_C
 --Edit Below--
 local MS_Near_Common = {}
  
