@@ -1,11 +1,20 @@
+---@class BP_BackpackUIComponentV2_Custom_C:BP_BackpackUIComponentV2_C
+--Edit Below--
 local BP_BackpackUIComponentV2_Custom = {}
 local GameData = UGCGameSystem.UGCRequire("Script.Blueprint.UGCGameData")
 
 local LOBBY_BACKPACK_MODE = 3
 local RUN_BACKPACK_MODE = 1
+local BACKPACK_OVERLAY_UI_RELATIVE_PATH = "Asset/GamePartCustom/BackpackV2/BackPackTest.BackPackTest_C"
+local BACKPACK_OVERLAY_SLOT = "UI.UISlot.MainUISlot_High"
+local BACKPACK_OVERLAY_Z_ORDER = 20
 
 local function Log(Message)
     ugcprint("[BackpackV2Custom] " .. tostring(Message))
+end
+
+local function IsWidgetValid(Widget)
+    return Widget ~= nil and UGCObjectUtility.IsObjectValid(Widget)
 end
 
 local function GetModeID()
@@ -23,19 +32,158 @@ end
 
 ---开始运行时执行
 function BP_BackpackUIComponentV2_Custom:ReceiveBeginPlay()
+    self.bBackpackOverlayWanted = false
+    self.bBackpackOverlayLoading = false
+    self.bBackpackOverlayEnding = false
+    Log(string.format(
+        "ReceiveBeginPlay Self=%s IsServer=%s",
+        tostring(self),
+        tostring(UGCGameSystem.IsServer())
+    ))
     BP_BackpackUIComponentV2_Custom.SuperClass.ReceiveBeginPlay(self)
 end
 
 ---结束运行时执行
 function BP_BackpackUIComponentV2_Custom:ReceiveEndPlay()
+    Log("ReceiveEndPlay")
+    self:DestroyBackpackOverlay()
     BP_BackpackUIComponentV2_Custom.SuperClass.ReceiveEndPlay(self)
+end
+
+function BP_BackpackUIComponentV2_Custom:ShowBackpackOverlay()
+    self.bBackpackOverlayWanted = true
+    Log(string.format(
+        "ShowBackpackOverlay Widget=%s Loading=%s Ending=%s",
+        tostring(self.BackpackOverlayWidget),
+        tostring(self.bBackpackOverlayLoading),
+        tostring(self.bBackpackOverlayEnding)
+    ))
+
+    if IsWidgetValid(self.BackpackOverlayWidget) then
+        if not UGCWidgetManagerSystem.IsWidgetAddedToSlot(self.BackpackOverlayWidget) then
+            Log("ShowBackpackOverlay re-add widget to slot")
+            UGCWidgetManagerSystem.AddToSlot(
+                self.BackpackOverlayWidget,
+                BACKPACK_OVERLAY_SLOT,
+                BACKPACK_OVERLAY_Z_ORDER
+            )
+        end
+
+        UGCWidgetManagerSystem.ShowWidget(self.BackpackOverlayWidget)
+        Log("ShowBackpackOverlay reused and showed widget")
+        return
+    end
+
+    self.BackpackOverlayWidget = nil
+    if self.bBackpackOverlayLoading or self.bBackpackOverlayEnding then
+        Log("ShowBackpackOverlay skipped because loading or ending")
+        return
+    end
+
+    local WidgetPath = UGCGameSystem.GetUGCResourcesFullPath(BACKPACK_OVERLAY_UI_RELATIVE_PATH)
+    self.bBackpackOverlayLoading = true
+    Log(string.format(
+        "CreateWidgetAsync RelativePath=%s FullPath=%s Slot=%s ZOrder=%s",
+        tostring(BACKPACK_OVERLAY_UI_RELATIVE_PATH),
+        tostring(WidgetPath),
+        tostring(BACKPACK_OVERLAY_SLOT),
+        tostring(BACKPACK_OVERLAY_Z_ORDER)
+    ))
+    UGCWidgetManagerSystem.CreateWidgetAsync(WidgetPath, function(Widget)
+        self.bBackpackOverlayLoading = false
+        Log(string.format(
+            "CreateWidgetAsync callback Widget=%s Wanted=%s Ending=%s",
+            tostring(Widget),
+            tostring(self.bBackpackOverlayWanted),
+            tostring(self.bBackpackOverlayEnding)
+        ))
+
+        if not IsWidgetValid(Widget) then
+            Log("ShowBackpackOverlay failed to create widget")
+            return
+        end
+
+        if self.bBackpackOverlayEnding then
+            Log("CreateWidgetAsync callback destroys widget because component is ending")
+            UGCWidgetManagerSystem.DestroyWidget(Widget)
+            return
+        end
+
+        self.BackpackOverlayWidget = Widget
+        UGCWidgetManagerSystem.AddToSlot(
+            self.BackpackOverlayWidget,
+            BACKPACK_OVERLAY_SLOT,
+            BACKPACK_OVERLAY_Z_ORDER
+        )
+        Log(string.format(
+            "Overlay added to slot Added=%s",
+            tostring(UGCWidgetManagerSystem.IsWidgetAddedToSlot(self.BackpackOverlayWidget))
+        ))
+
+        if self.bBackpackOverlayWanted then
+            UGCWidgetManagerSystem.ShowWidget(self.BackpackOverlayWidget)
+            Log("CreateWidgetAsync callback showed widget")
+        else
+            UGCWidgetManagerSystem.HideWidget(self.BackpackOverlayWidget)
+            Log("CreateWidgetAsync callback hid widget because backpack is closed")
+        end
+    end)
+end
+
+function BP_BackpackUIComponentV2_Custom:HideBackpackOverlay()
+    self.bBackpackOverlayWanted = false
+    Log(string.format("HideBackpackOverlay Widget=%s", tostring(self.BackpackOverlayWidget)))
+
+    if IsWidgetValid(self.BackpackOverlayWidget) then
+        UGCWidgetManagerSystem.HideWidget(self.BackpackOverlayWidget)
+        Log("HideBackpackOverlay hid widget")
+    end
+end
+
+function BP_BackpackUIComponentV2_Custom:DestroyBackpackOverlay()
+    self.bBackpackOverlayWanted = false
+    self.bBackpackOverlayEnding = true
+    Log(string.format("DestroyBackpackOverlay Widget=%s", tostring(self.BackpackOverlayWidget)))
+
+    if not IsWidgetValid(self.BackpackOverlayWidget) then
+        self.BackpackOverlayWidget = nil
+        Log("DestroyBackpackOverlay no valid widget")
+        return
+    end
+
+    if UGCWidgetManagerSystem.IsWidgetAddedToSlot(self.BackpackOverlayWidget) then
+        UGCWidgetManagerSystem.RemoveFromSlot(self.BackpackOverlayWidget)
+    end
+
+    UGCWidgetManagerSystem.DestroyWidget(self.BackpackOverlayWidget)
+    self.BackpackOverlayWidget = nil
+    Log("DestroyBackpackOverlay destroyed widget")
+end
+
+---@param Panel UUserWidget @Backpack main panel
+function BP_BackpackUIComponentV2_Custom:OnOpenBattleMainPanel(Panel)
+    Log(string.format("OnOpenBattleMainPanel Panel=%s", tostring(Panel)))
+    self:ShowBackpackOverlay()
+end
+
+---@param Panel UUserWidget @Backpack main panel
+function BP_BackpackUIComponentV2_Custom:OnCloseBattleMainPanel(Panel)
+    Log(string.format("OnCloseBattleMainPanel Panel=%s", tostring(Panel)))
+    self:HideBackpackOverlay()
 end
 
 ---默认背包模式OverrideDefaultMode可配置
 ---生效范围：客户端
 ---@return number @背包模式 [1-3]
--- function BP_BackpackUIComponentV2_Custom:GetDefaultMode()
--- end
+function BP_BackpackUIComponentV2_Custom:GetDefaultMode()
+    local DefaultMode = IsLobbyMode() and LOBBY_BACKPACK_MODE or RUN_BACKPACK_MODE
+    Log(string.format(
+        "GetDefaultMode ModeID=%s DefaultMode=%s",
+        tostring(GetModeID()),
+        tostring(DefaultMode)
+    ))
+    return DefaultMode
+end
 
 ---获取背包入口按钮控件
 ---生效范围：客户端
@@ -58,28 +206,6 @@ end
 ---生效范围：客户端
 ---@param Style number @0全屏，1半屏
 ---@param Mode number @1:背包+装备栏 2:背包+仓库 3:背包+装备栏+仓库
-function BP_BackpackUIComponentV2_Custom:OpenBattleMainUIStyle(Style, Mode)
-    Log(string.format("OpenBattleMainUIStyle ModeID=%s Style=%s Mode=%s IsLobby=%s", tostring(GetModeID()), tostring(Style), tostring(Mode), tostring(IsLobbyMode())))
-
-    if IsLobbyMode() then
-        self:OpenLobbyBackpackMainUI(LOBBY_BACKPACK_MODE)
-        return
-    end
-
-    self:OpenBattleMainPanel(Style, RUN_BACKPACK_MODE)
-end
-
-function BP_BackpackUIComponentV2_Custom:ClosePanel()
-    Log(string.format("ClosePanel ModeID=%s IsLobby=%s", tostring(GetModeID()), tostring(IsLobbyMode())))
-
-    if IsLobbyMode() then
-        self:CloseLobbyPanel()
-        return
-    end
-
-    self:CloseBattleMainPanel()
-end
-
 ---打开删除弹窗
 ---生效范围：客户端
 ---@param InstanceID number @物品实例ID

@@ -53,4 +53,18 @@ function UGCGameMode:InitLevelFlow(ModeID)
     )
 end
 
+function UGCGameMode:PrintTable(t, indent)
+    indent = indent or 0
+    for k, v in pairs(t) do
+        local prefix = string.rep("  ", indent)
+        if type(v) == "table" then
+            print(prefix .. tostring(k) .. " = {")
+            UGCGameMode.PrintTable(v, indent + 1)
+            print(prefix .. "}")
+        else
+            print(prefix .. tostring(k) .. " = " .. tostring(v))
+        end
+    end
+end
+
 return UGCGameMode;
